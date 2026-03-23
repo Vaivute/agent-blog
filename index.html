@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>When Agents Misbehave — Design Patterns</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0e0e0e;
+    --ink-60: rgba(14,14,14,0.6);
+    --ink-30: rgba(14,14,14,0.3);
+    --ink-10: rgba(14,14,14,0.1);
+    --ink-06: rgba(14,14,14,0.06);
+    --paper: #f5f3ee;
+    --white: #ffffff;
+    --amber: #d4822a;
+    --amber-light: #fdf0e0;
+    --amber-mid: #f5c97a;
+    --teal: #1a6b5c;
+    --teal-light: #e0f0ec;
+    --red: #c0392b;
+    --red-light: #fdecea;
+    --blue: #1a4d8c;
+    --blue-light: #e8f0fb;
+    --green: #2d6a4f;
+    --green-light: #e8f5ee;
+    --rule: 1px solid var(--ink-10);
+    --sans: 'DM Sans', sans-serif;
+    --serif: 'DM Serif Display', serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  html { background: var(--paper); color: var(--ink); font-family: var(--sans); }
+  
+  body {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 32px 120px;
+  }
+
+  /* ── Header ── */
+  .header {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 32px;
+    margin-bottom: 72px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .header-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    margin-bottom: 10px;
+  }
+  .header-title {
+    font-family: var(--serif);
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.05;
+    font-weight: 400;
+  }
+  .header-meta {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-60);
+    line-height: 1.8;
+  }
+
+  /* ── Principle card ── */
+  .principle {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 0 48px;
+    margin-bottom: 96px;
+    padding-bottom: 96px;
+    border-bottom: var(--rule);
+  }
+  .principle:last-child { border-bottom: none; }
+
+  .principle-sidebar {
+    padding-top: 4px;
+  }
+  .principle-num {
+    font-family: var(--serif);
+    font-size: 72px;
+    line-height: 1;
+    color: var(--ink-10);
+    letter-spacing: -2px;
+    display: block;
+    margin-bottom: 16px;
+  }
+  .principle-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    margin-bottom: 8px;
+  }
+  .principle-title {
+    font-family: var(--serif);
+    font-size: 20px;
+    line-height: 1.3;
+    font-weight: 400;
+    margin-bottom: 16px;
+  }
+  .principle-desc {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--ink-60);
+  }
+
+  .principle-main { min-width: 0; }
+
+  .mockup-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-30);
+    margin-bottom: 12px;
+  }
+
+  /* ── Shared mockup chrome ── */
+  .chat-window {
+    background: var(--white);
+    border: var(--rule);
+    border-radius: 12px;
+    overflow: hidden;
+    font-family: var(--sans);
+  }
+  .chat-titlebar {
+    background: var(--ink-06);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: var(--rule);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .chat-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── Message bubbles ── */
+  .msg { display: flex; gap: 10px; align-items: flex-start; max-width: 100%; }
+  .msg.user { flex-direction: row-reverse; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 500; font-family: var(--mono);
+  }
+  .avatar-agent { background: var(--ink); color: var(--white); }
+  .avatar-user  { background: var(--ink-10); color: var(--ink-60); }
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    max-width: 480px;
+  }
+  .bubble-agent { background: var(--ink-06); color: var(--ink); border-bottom-left-radius: 4px; }
+  .bubble-user  { background: var(--ink); color: var(--white); border-bottom-right-radius: 4px; }
+
+  /* ── Intent confirm card (P1) ── */
+  .intent-card {
+    margin: 4px 0 4px 38px;
+    background: var(--amber-light);
+    border: 1px solid var(--amber-mid);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+  }
+  .intent-card-text { color: var(--ink); line-height: 1.5; flex: 1; }
+  .intent-card-text strong { font-weight: 500; display: block; font-size: 11px; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--amber); margin-bottom: 4px; }
+  .intent-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; margin-top: 2px; }
+  .btn { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; border: none; cursor: pointer; font-family: var(--sans); }
+  .btn-ghost { background: transparent; border: 1px solid var(--ink-30); color: var(--ink-60); }
+  .btn-solid { background: var(--ink); color: var(--white); }
+  .btn-amber { background: var(--amber); color: var(--white); }
+
+  /* ── Error / recover card (P2) ── */
+  .error-card {
+    margin: 4px 0 4px 38px;
+    border: 1px solid var(--ink-10);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .error-header {
+    background: var(--ink-06);
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: var(--rule);
+  }
+  .error-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; flex-shrink: 0; }
+  .error-icon.warn { background: #fff3cd; color: #856404; }
+  .error-icon.stop { background: var(--red-light); color: var(--red); }
+  .error-title-text { font-weight: 500; color: var(--ink); flex: 1; }
+  .error-body { padding: 12px 14px; }
+  .error-why { color: var(--ink-60); margin-bottom: 12px; line-height: 1.6; }
+  .recover-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-30); margin-bottom: 8px; }
+  .recover-options { display: flex; flex-direction: column; gap: 6px; }
+  .recover-opt {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border: 1px solid var(--ink-10); border-radius: 7px; cursor: pointer;
+    background: var(--white); transition: background 0.15s;
+  }
+  .recover-opt:hover { background: var(--ink-06); }
+  .recover-opt-icon { font-size: 14px; }
+  .recover-opt-text { font-size: 13px; color: var(--ink); }
+
+  /* ── Uncertainty checkpoint (P3) ── */
+  .checkpoint-card {
+    margin: 4px 0 4px 38px;
+    border: 1px solid #c8d8f0;
+    border-radius: 10px;
+    background: var(--blue-light);
+    padding: 14px;
+    font-size: 13px;
+  }
+  .checkpoint-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .conf-meter { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .conf-label { font-family: var(--mono); font-size: 10px; color: var(--blue); text-transform: uppercase; letter-spacing: 0.08em; }
+  .conf-bar { flex: 1; height: 4px; background: rgba(26,77,140,0.15); border-radius: 2px; overflow: hidden; }
+  .conf-fill { height: 100%; border-radius: 2px; background: var(--blue); }
+  .conf-val { font-family: var(--mono); font-size: 11px; color: var(--blue); }
+  .checkpoint-text { color: var(--ink); line-height: 1.6; flex: 1; }
+  .checkpoint-actions { display: flex; gap: 8px; }
+  .btn-blue { background: var(--blue); color: var(--white); }
+  .btn-blue-ghost { background: transparent; border: 1px solid #a0bbdd; color: var(--blue); }
+
+  /* ── Honest output (P4) ── */
+  .honest-block {
+    margin: 4px 0 4px 38px;
+    border: 1px solid var(--ink-10);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .honest-section { padding: 12px 14px; border-bottom: var(--rule); line-height: 1.7; color: var(--ink); }
+  .honest-section:last-child { border-bottom: none; }
+  .honest-section.low-conf { background: #fffbf0; }
+  .honest-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 4px;
+    margin-bottom: 6px; font-weight: 500;
+  }
+  .badge-confident { background: var(--green-light); color: var(--green); }
+  .badge-uncertain { background: #fff3cd; color: #7a5c0a; }
+  .honest-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-green { background: var(--green); }
+  .dot-amber-col { background: var(--amber); }
+
+  /* ── Trust arc (P5) ── */
+  .trust-arc {
+    background: var(--white);
+    border: var(--rule);
+    border-radius: 12px;
+    padding: 20px;
+    font-size: 13px;
+  }
+  .trust-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .trust-title { font-weight: 500; color: var(--ink); }
+  .trust-session { font-family: var(--mono); font-size: 10px; color: var(--ink-30); }
+  .trust-track-wrap { position: relative; margin-bottom: 24px; }
+  .trust-track {
+    height: 6px; border-radius: 3px;
+    background: linear-gradient(to right, #e0f0ec 0%, #b0d8cc 35%, #6bb8a0 65%, #1a6b5c 100%);
+    position: relative;
+  }
+  .trust-thumb {
+    position: absolute; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--white); border: 2px solid var(--teal);
+    top: 50%; transform: translate(-50%, -50%);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  .trust-ticks { display: flex; justify-content: space-between; margin-top: 8px; }
+  .trust-tick { font-family: var(--mono); font-size: 10px; color: var(--ink-30); text-align: center; }
+  .trust-tick.active { color: var(--teal); font-weight: 500; }
+  .trust-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .trust-mode {
+    border: 1px solid var(--ink-10); border-radius: 8px; padding: 10px 12px;
+    background: var(--ink-06);
+  }
+  .trust-mode.active { border-color: var(--teal); background: var(--teal-light); }
+  .trust-mode-name { font-weight: 500; font-size: 12px; color: var(--ink); margin-bottom: 4px; }
+  .trust-mode.active .trust-mode-name { color: var(--teal); }
+  .trust-mode-desc { font-size: 11px; color: var(--ink-30); line-height: 1.5; }
+  .trust-mode.active .trust-mode-desc { color: var(--teal); opacity: 0.8; }
+
+  /* ── Skill gradient (P6) ── */
+  .skill-card {
+    background: var(--white);
+    border: var(--rule);
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .skill-tabs { display: flex; border-bottom: var(--rule); }
+  .skill-tab {
+    padding: 10px 16px;
+    font-size: 12px; font-weight: 500; cursor: pointer; color: var(--ink-30);
+    border-right: var(--rule);
+    font-family: var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .skill-tab.active { color: var(--ink); background: var(--ink-06); }
+  .skill-body { padding: 16px; }
+  .skill-simple { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
+  .skill-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .skill-icon.warn { background: #fff3cd; }
+  .skill-text { line-height: 1.6; color: var(--ink); }
+  .skill-expand {
+    border: 1px solid var(--ink-10); border-radius: 8px; overflow: hidden;
+  }
+  .skill-expand-header {
+    padding: 8px 12px; background: var(--ink-06); display: flex;
+    align-items: center; justify-content: space-between; cursor: pointer;
+    font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--ink-60);
+  }
+  .skill-expand-body {
+    padding: 10px 12px; font-family: var(--mono); font-size: 11px;
+    line-height: 1.8; color: var(--ink-60); background: #fafafa;
+  }
+
+  /* ── Limit bar (P7) ── */
+  .limit-chrome {
+    background: var(--white);
+    border: var(--rule);
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .limit-topbar {
+    padding: 8px 16px;
+    background: #fff8ec;
+    border-bottom: 1px solid #f5e0b0;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .limit-bar-track {
+    flex: 1; height: 4px; border-radius: 2px;
+    background: var(--ink-10); overflow: hidden;
+  }
+  .limit-bar-fill {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(to right, var(--amber-mid), var(--amber));
+  }
+  .limit-pct { font-family: var(--mono); font-size: 11px; color: var(--amber); font-weight: 500; }
+  .limit-tip {
+    font-size: 12px; color: #7a5c0a;
+  }
+  .limit-tip strong { font-weight: 500; }
+  .limit-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .limit-states { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+  .limit-state { border-radius: 8px; padding: 10px; border: 1px solid transparent; }
+  .limit-state.s-ok   { background: var(--green-light); border-color: #b0d8b8; }
+  .limit-state.s-warn { background: #fff3cd; border-color: #f5e0b0; }
+  .limit-state.s-crit { background: var(--red-light); border-color: #f0c0ba; }
+  .limit-state-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .s-ok   .limit-state-label { color: var(--green); }
+  .s-warn .limit-state-label { color: #7a5c0a; }
+  .s-crit .limit-state-label { color: var(--red); }
+  .limit-state-pct { font-family: var(--mono); font-size: 20px; font-weight: 500; }
+  .s-ok   .limit-state-pct { color: var(--green); }
+  .s-warn .limit-state-pct { color: var(--amber); }
+  .s-crit .limit-state-pct { color: var(--red); }
+  .limit-state-msg { font-size: 11px; color: var(--ink-60); line-height: 1.4; margin-top: 4px; }
+
+  /* ── Acknowledge & act (P8) ── */
+  .pivot-toast {
+    margin: 0 0 4px 38px;
+    background: var(--ink);
+    color: var(--white);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px;
+  }
+  .pivot-arrow { font-size: 16px; opacity: 0.7; }
+  .pivot-text { flex: 1; }
+  .pivot-text em { font-style: normal; opacity: 0.6; }
+  .pivot-prev {
+    margin: 0 0 4px 38px;
+    background: var(--ink-06);
+    border-radius: 8px;
+    padding: 8px 14px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--ink-30);
+    text-decoration: line-through;
+    font-style: italic;
+  }
+  .pivot-tag { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-30); background: var(--ink-06); border-radius: 4px; padding: 2px 6px; flex-shrink: 0; }
+
+  /* ── Annotation band ── */
+  .annotation {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-left: 2px solid var(--amber);
+    background: var(--amber-light);
+    border-radius: 0 8px 8px 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--ink-60);
+  }
+  .annotation strong { font-weight: 500; color: var(--amber); font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 96px;
+    padding-top: 32px;
+    border-top: 2px solid var(--ink);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .footer-text { font-family: var(--mono); font-size: 11px; color: var(--ink-30); }
+
+  @media (max-width: 720px) {
+    body { padding: 32px 20px 80px; }
+    .principle { grid-template-columns: 1fr; gap: 24px; }
+    .principle-num { font-size: 48px; margin-bottom: 8px; }
+    .trust-modes, .limit-states { grid-template-columns: 1fr; }
+    .skill-tabs { overflow-x: auto; }
+    .header { flex-direction: column; align-items: flex-start; }
+    .header-meta { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div>
+    <p class="header-eyebrow">Design reference · Agent misbehaviour patterns</p>
+    <h1 class="header-title">When Agents<br><em>Misbehave</em></h1>
+  </div>
+    <div class="header-meta">
+    Eight principles<br>
+    Eight patterns<br>
+    Salience · Coordination · Trust
+  </div>
+</header>
+
+
+<!-- ═══════════════════════════════════════════
+     P1 — CONFIRM BEFORE YOU COMMIT
+═══════════════════════════════════════════ -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">01</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Confirm before you commit</h2>
+    <p class="principle-desc">Before acting, the agent briefly surfaces its understanding of intent — creating a lightweight coordination moment that keeps human involvement appropriately high at initiation, when misreads are most costly.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — intent checkpoint</p>
+    <div class="chat-window">
+      <div class="chat-titlebar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      </div>
+      <div class="chat-body">
+        <div class="msg user">
+          <div class="avatar avatar-user">V</div>
+          <div class="bubble bubble-user">Analyse the Q3 sales data and summarise trends by region</div>
+        </div>
+        <div class="intent-card">
+          <div class="intent-card-text">
+            <strong>Before I proceed</strong>
+            I'll analyse the Q3 sales CSV, calculate regional totals and growth rates, and return a written summary with key trends. I won't modify any files.
+          </div>
+          <div class="intent-actions">
+            <button class="btn btn-ghost">Adjust</button>
+            <button class="btn btn-amber">Proceed</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> The card is shown for ~4 seconds then auto-proceeds — it's a checkpoint, not a gate. It anchors the coordination zone at initiation: human involvement is briefly high, then relaxes as the agent acts. The "Adjust" path opens an inline text field. Position: between the user message and the agent's first action step, not as a modal.
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     P2 — FAIL TRANSPARENTLY, RECOVER WITH DIRECTION
+═══════════════════════════════════════════ -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">02</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Fail transparently, recover with direction</h2>
+    <p class="principle-desc">When AI activity hits a wall, the agent makes that visible rather than silent — and immediately offers a path forward. Transparency about what's happening behind the scenes is the minimum condition for maintaining trust.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — structured error + recovery</p>
+    <div class="chat-window">
+      <div class="chat-titlebar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      </div>
+      <div class="chat-body">
+        <div class="msg user">
+          <div class="avatar avatar-user">V</div>
+          <div class="bubble bubble-user">Pull last month's model training metrics from the dashboard</div>
+        </div>
+        <div class="error-card">
+          <div class="error-header">
+            <div class="error-icon stop">✕</div>
+            <span class="error-title-text">Couldn't access the dashboard</span>
+          </div>
+          <div class="error-body">
+            <p class="error-why">Your session token for the metrics dashboard has expired. I can't retrieve live data without re-authentication.</p>
+            <p class="recover-label">What you can do</p>
+            <div class="recover-options">
+              <div class="recover-opt">
+                <span class="recover-opt-icon">🔑</span>
+                <span class="recover-opt-text">Re-authenticate and retry automatically</span>
+              </div>
+              <div class="recover-opt">
+                <span class="recover-opt-icon">📂</span>
+                <span class="recover-opt-text">Use the exported CSV from last week's report instead</span>
+              </div>
+              <div class="recover-opt">
+                <span class="recover-opt-icon">✏️</span>
+                <span class="recover-opt-text">Paste the metrics directly and I'll analyse them</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> The failure message is plain language, not an error code. The three recovery paths are ranked by least friction first — each one re-establishes a coordination zone the user can actually enter. The agent does not apologise. Surfacing AI activity at the point of failure, not after, is what makes recovery feel designed rather than accidental.
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     P3 — SIGNAL UNCERTAINTY BEFORE THE RABBIT HOLE
+═══════════════════════════════════════════ -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">03</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Signal uncertainty before the rabbit hole</h2>
+    <p class="principle-desc">When task complexity is high or user intent is ambiguous, the agent raises its own salience before going deep — pulling human involvement back up before it's too late to course-correct.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — pre-execution uncertainty checkpoint</p>
+    <div class="chat-window">
+      <div class="chat-titlebar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      </div>
+      <div class="chat-body">
+        <div class="msg user">
+          <div class="avatar avatar-user">V</div>
+          <div class="bubble bubble-user">Fix the latency issue in the model serving pipeline</div>
+        </div>
+        <div class="checkpoint-card">
+          <div class="checkpoint-top">
+            <div style="flex:1">
+              <div class="conf-meter">
+                <span class="conf-label">Confidence</span>
+                <div class="conf-bar"><div class="conf-fill" style="width:42%"></div></div>
+                <span class="conf-val">42%</span>
+              </div>
+              <p class="checkpoint-text" style="color: var(--ink);">I can see 3 possible causes for this latency issue, but I'm not confident which one applies to your setup without more context. If I guess wrong I could take this in the wrong direction for a while.</p>
+            </div>
+          </div>
+          <div class="conf-meter" style="margin-bottom:10px;">
+            <span class="conf-label" style="font-size:10px; color: var(--ink-60);">Before I dig in — which environment is affected?</span>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 10px;">
+            <button class="btn btn-blue-ghost" style="font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid #a0bbdd; color:var(--blue); background:transparent; cursor:pointer;">Production</button>
+            <button class="btn btn-blue-ghost" style="font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid #a0bbdd; color:var(--blue); background:transparent; cursor:pointer;">Staging</button>
+            <button class="btn btn-blue-ghost" style="font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid #a0bbdd; color:var(--blue); background:transparent; cursor:pointer;">Both</button>
+          </div>
+          <div class="checkpoint-actions">
+            <button class="btn btn-ghost" style="font-size:12px;">Skip — just try your best</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> The confidence meter is shown numerically and as a bar — explicit, not decorative. This is responsive salience in action: the agent increases its own visibility when perceived risk is high, rather than waiting for the user to ask. The checkpoint is triggered only below a configurable threshold (e.g. &lt;60%). The "skip" escape hatch ensures it never becomes a blocker.
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     P4 — HONESTY OVER PERFORMANCE
+═══════════════════════════════════════════ -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">04</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Honesty over performance</h2>
+    <p class="principle-desc">Because agentic AI is nondeterministic, confident-sounding output can still be wrong. Tiered output makes that legible — users see not just what the agent produced, but how much the agent actually knows.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — tiered confidence output</p>
+    <div class="chat-window">
+      <div class="chat-titlebar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      </div>
+      <div class="chat-body">
+        <div class="msg user">
+          <div class="avatar avatar-user">V</div>
+          <div class="bubble bubble-user">What caused the spike in inference errors last Tuesday?</div>
+        </div>
+        <div class="honest-block">
+          <div class="honest-section">
+            <span class="honest-badge badge-confident"><div class="honest-dot dot-green"></div> Confirmed from logs</span>
+            <p>The error spike began at 14:32 UTC. It coincided with a deployment of model version 3.1.2 to the eu-west-1 cluster. Rollback was initiated at 15:08 UTC and errors dropped to baseline within 6 minutes.</p>
+          </div>
+          <div class="honest-section low-conf">
+            <span class="honest-badge badge-uncertain"><div class="honest-dot dot-amber-col"></div> Inferred — not confirmed</span>
+            <p>The most likely root cause is a memory allocation change in v3.1.2 that interacts poorly with the current GPU driver version on eu-west-1 instances. I don't have access to the deployment diff to verify this directly.</p>
+            <div style="margin-top:8px; display:flex; gap:8px;">
+              <button class="btn btn-ghost" style="font-size:11px; padding:4px 10px;">Show reasoning</button>
+              <button class="btn btn-ghost" style="font-size:11px; padding:4px 10px;">Flag as inaccurate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> Two tiers only — confirmed and inferred. The visual separation is colour + badge, not just a footnote asterisk. Nondeterministic systems require users to calibrate their own trust; this pattern makes that calibration possible. Users can flag inaccurate sections inline, feeding back into the agent's context. Never three or more tiers — it becomes noise.
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     P5 — BUILD A TRUST ARC
+═══════════════════════════════════════════ -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">05</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Build a salience arc, not a fixed mode</h2>
+    <p class="principle-desc">AI salience — how prominent and active the agent feels — should shift over time. High salience means the agent is visible, collaborative, and explains itself. Low salience means it works quietly and autonomously. The right position changes as trust builds.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — responsive salience control</p>
+    <div class="trust-arc">
+      <div class="trust-header">
+        <span class="trust-title">Salience</span>
+        <span class="trust-session">Session 14 · 3 weeks active</span>
+      </div>
+      <div class="trust-track-wrap">
+        <div class="trust-track">
+          <div class="trust-thumb" style="left: 45%"></div>
+        </div>
+        <div class="trust-ticks" style="margin-top:10px;">
+          <span class="trust-tick">Low salience</span>
+          <span class="trust-tick active">↑ Now<br>Calibrated</span>
+          <span class="trust-tick">High salience</span>
+        </div>
+      </div>
+      <div class="trust-modes">
+        <div class="trust-mode">
+          <div class="trust-mode-name">Low salience</div>
+          <div class="trust-mode-desc">Done-for-me · agent acts autonomously, surfaces only blockers, summarises after</div>
+        </div>
+        <div class="trust-mode active">
+          <div class="trust-mode-name">Calibrated</div>
+          <div class="trust-mode-desc">Done-with-me on complex steps · done-for-me on routine ones · adapts per task</div>
+        </div>
+        <div class="trust-mode">
+          <div class="trust-mode-name">High salience</div>
+          <div class="trust-mode-desc">Done-with-me · agent confirms intent, narrates reasoning, checks before acting</div>
+        </div>
+      </div>
+      <div style="margin-top:14px; padding-top:14px; border-top: var(--rule); font-size:12px; color: var(--ink-30); font-family: var(--mono);">
+        Salience shifts automatically based on task complexity, perceived risk &amp; user comfort · override manually at any time
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> Salience is driven by observable coordination signals — task complexity, perceived risk, correction frequency — not just elapsed time. High salience increases human involvement and makes AI activity visible; low salience steps back and lets the agent work. The current salience level is always shown so users are never surprised by how much the agent is doing on their behalf. Users can override at any moment.
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     P6 — DESIGN FOR THE SKILL GRADIENT
+═══════════════════════════════════════════ -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">06</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Design for the skill gradient</h2>
+    <p class="principle-desc">User comfort level and domain expertise are coordination signals just as much as task complexity and perceived risk. The same failure state should produce different salience and different amounts of AI activity depending on who's experiencing it.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — layered error disclosure</p>
+    <div class="skill-card">
+      <div class="skill-tabs">
+        <div class="skill-tab active">Simple</div>
+        <div class="skill-tab">Developer</div>
+        <div class="skill-tab" style="border-right:none;">Raw logs</div>
+      </div>
+      <div class="skill-body">
+        <div class="skill-simple">
+          <div class="skill-icon warn">⚠️</div>
+          <div class="skill-text">
+            <strong style="font-weight:500; display:block; margin-bottom:4px;">The training job couldn't start</strong>
+            The system doesn't have enough GPU capacity right now. This usually clears up within 30–60 minutes. You can wait and retry, or switch to a smaller instance type to start sooner.
+          </div>
+        </div>
+        <div class="skill-expand">
+          <div class="skill-expand-header">
+            <span>Technical details</span>
+            <span>▾</span>
+          </div>
+          <div class="skill-expand-body">
+            ResourceLimitExceeded: ml.p3.8xlarge capacity<br>
+            Region: us-east-1 · Requested: 4 instances<br>
+            Available: 0 · Queue position: 12<br>
+            Estimated wait: 45–90 min<br>
+            <br>
+            Alternative: ml.p3.2xlarge available (×8 now)<br>
+            Estimated training delta: +2.3h
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> Three tabs, not one. The "Simple" tab is what everyone sees by default — written for a user whose comfort level with the domain is low. "Developer" shows structured technical data for users who want more AI activity visible. "Raw logs" for engineers who need full transparency. The default tab is set per user role, not locked globally. This is coordination calibrated to who's in the loop.
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     P7 — ANNOUNCE LIMITS BEFORE THEY BITE
+═══════════════════════════════════════════ -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">07</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Announce limits before they bite</h2>
+    <p class="principle-desc">Coordination curves have valleys — stretches where the agent operates independently and human involvement drops. When those valleys are approaching a hard limit, salience should rise just enough to let the user plan their next move.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — progressive limit indicator</p>
+    <div class="limit-chrome">
+      <div class="limit-topbar">
+        <span class="limit-tip"><strong>18% context remaining</strong> — consider summarising before starting a new task</span>
+        <div class="limit-bar-track">
+          <div class="limit-bar-fill" style="width: 18%"></div>
+        </div>
+        <span class="limit-pct">18%</span>
+      </div>
+      <div class="limit-body">
+        <div class="msg">
+          <div class="avatar avatar-agent">A</div>
+          <div class="bubble bubble-agent">Here's the refactored authentication module. I've separated the OAuth flow from the session management and added proper error boundaries throughout…</div>
+        </div>
+        <div class="limit-states">
+          <div class="limit-state s-ok">
+            <div class="limit-state-label">Comfortable</div>
+            <div class="limit-state-pct">80–100%</div>
+            <div class="limit-state-msg">No indicator shown</div>
+          </div>
+          <div class="limit-state s-warn">
+            <div class="limit-state-label">Approaching</div>
+            <div class="limit-state-pct">15–79%</div>
+            <div class="limit-state-msg">Bar appears, no action needed yet</div>
+          </div>
+          <div class="limit-state s-crit">
+            <div class="limit-state-label">Critical</div>
+            <div class="limit-state-pct">&lt;15%</div>
+            <div class="limit-state-msg">Prompt to summarise &amp; continue</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> The bar only appears when the limit is worth being aware of (&lt;80%). At comfortable capacity there's no visual noise — salience stays low. As the limit approaches, salience rises just enough to prompt action. The colour transitions warm as limits close in — amber, not red — because this is a coordination signal, not an alarm. The message is always actionable: not "low context" but "consider summarising before your next task."
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     P8 — ACKNOWLEDGE AND ACT
+═══════════════════════════════════════════ -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">08</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Acknowledge and act — don't apologise</h2>
+    <p class="principle-desc">Context disruption is a coordination event. The agent should handle the handoff cleanly — marking what was in progress, confirming the new direction, and restoring momentum — without treating it as an emotional moment.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — clean pivot acknowledgement</p>
+    <div class="chat-window">
+      <div class="chat-titlebar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      </div>
+      <div class="chat-body">
+        <div class="msg">
+          <div class="avatar avatar-agent">A</div>
+          <div class="bubble bubble-agent">I'm refactoring the authentication module — renaming the token handlers and restructuring the session middleware…</div>
+        </div>
+        <div class="msg user">
+          <div class="avatar avatar-user">V</div>
+          <div class="bubble bubble-user">Stop — actually I need to fix the login bug first before we refactor anything</div>
+        </div>
+        <div class="pivot-prev">
+          <span class="pivot-tag">Paused</span>
+          Auth module refactor — 30% complete
+        </div>
+        <div class="pivot-toast">
+          <span class="pivot-arrow">↩</span>
+          <span class="pivot-text">Switching to login bug. <em>Refactor paused and saved — you can resume it later.</em></span>
+        </div>
+        <div class="msg">
+          <div class="avatar avatar-agent">A</div>
+          <div class="bubble bubble-agent">OK — what's the login bug? Can you describe what's failing, or point me to the relevant file?</div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> Three elements, in sequence: (1) the paused task is shown struck-through and labelled "Paused" — the coordination curve dips but the thread is preserved; (2) a single dark toast acknowledges the pivot and confirms continuity; (3) the agent immediately moves human involvement back up by asking for what it needs. No apology. No recap. A good handoff looks like this: acknowledge, confirm, proceed.
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Footer ── -->
+<footer class="footer">
+  <p class="footer-text">When Agents Misbehave · Design Patterns · 2025</p>
+  <p class="footer-text">8 principles · 8 patterns · grounded in field research</p>
+</footer>
+
+</body>
+</html>
