@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>When Agents Misbehave — How Users Remember Agents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #000000;
+    --ink-80: rgba(0,0,0,0.85);
+    --ink-60: rgba(0,0,0,0.55);
+    --ink-30: rgba(0,0,0,0.3);
+    --ink-10: rgba(0,0,0,0.1);
+    --ink-06: rgba(0,0,0,0.05);
+    --paper: #ffffff;
+    --white: #ffffff;
+    --amber: #ffe500;
+    --amber-light: #fff8a8;
+    --amber-mid: #ffee4a;
+    --teal: #00e676;
+    --teal-light: #c8f7d4;
+    --red: #ff1744;
+    --red-light: #ffd6d6;
+    --blue: #2962ff;
+    --blue-light: #d8e4ff;
+    --green: #00e676;
+    --green-light: #c8f7d4;
+    --rule: 1px solid var(--ink-10);
+    --sans: 'DM Sans', sans-serif;
+    --serif: 'DM Serif Display', serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  html { background: var(--paper); color: var(--ink); font-family: var(--sans); }
+
+  /* ── Password gate ── */
+  #password-gate {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #password-gate .gate-box {
+    display: flex; flex-direction: column; gap: 20px;
+    max-width: 320px; width: 100%; padding: 0 24px;
+  }
+  #password-gate .gate-label {
+    font-family: var(--serif); font-size: 28px; font-weight: 400; line-height: 1.2;
+  }
+  #password-gate .gate-sub {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-60);
+    letter-spacing: 0.08em; margin-top: -12px;
+  }
+  #password-gate input {
+    font-family: var(--mono); font-size: 14px;
+    border: none; border-bottom: 1.5px solid var(--ink);
+    background: transparent; outline: none; padding: 8px 0;
+    color: var(--ink); width: 100%; letter-spacing: 0.1em;
+  }
+  #password-gate input::placeholder { color: var(--ink-30); letter-spacing: 0.05em; }
+  #password-gate .gate-error {
+    font-family: var(--mono); font-size: 11px; color: var(--red);
+    letter-spacing: 0.06em; display: none;
+  }
+  #password-gate button {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; background: var(--ink); color: var(--white);
+    border: none; padding: 12px 24px; cursor: pointer; align-self: flex-start;
+  }
+  #password-gate button:hover { opacity: 0.85; }
+  body.locked { overflow: hidden; }
+
+  body {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 32px 120px;
+  }
+
+  /* ── Header ── */
+  .header {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 32px;
+    margin-bottom: 72px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .header-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    margin-bottom: 10px;
+  }
+  .header-title {
+    font-family: var(--serif);
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.05;
+    font-weight: 400;
+  }
+  .header-subtitle {
+    font-family: var(--sans);
+    font-size: 17px;
+    font-weight: 300;
+    color: var(--ink-60);
+    margin-top: 14px;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+  @media (max-width: 900px) {
+    .header-subtitle { white-space: normal; font-size: 16px; }
+  }
+  .header-meta {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-60);
+    line-height: 1.8;
+  }
+
+  /* ── Prose sections ── */
+  .prose {
+    max-width: 680px;
+    margin: 0 auto 64px;
+  }
+  .prose p {
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--ink-80);
+    margin-bottom: 20px;
+  }
+  .prose p:last-child { margin-bottom: 0; }
+  .prose p strong {
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .prose .lead {
+    font-size: 19px;
+    font-weight: 300;
+    color: var(--ink);
+    line-height: 1.65;
+  }
+  .prose h2 {
+    font-family: var(--serif);
+    font-size: clamp(24px, 3.5vw, 36px);
+    font-weight: 400;
+    line-height: 1.15;
+    margin-bottom: 28px;
+    margin-top: 80px;
+    color: var(--ink);
+  }
+  .prose h3 {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1.3;
+    margin-bottom: 20px;
+    margin-top: 56px;
+    color: var(--ink);
+  }
+  .prose .section-rule {
+    border: none;
+    border-top: var(--rule);
+    margin: 64px 0;
+  }
+  .prose blockquote {
+    border-left: 2px solid var(--ink);
+    padding: 12px 0 12px 20px;
+    margin: 28px 0;
+    font-style: italic;
+    color: var(--ink-60);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .prose .taxonomy-item {
+    margin-bottom: 24px;
+    padding-left: 0;
+  }
+  .prose .taxonomy-item strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .prose .callout {
+    background: var(--ink-06);
+    border-left: 2px solid var(--ink);
+    border-radius: 0 8px 8px 0;
+    padding: 16px 20px;
+    margin: 32px 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink-80);
+  }
+  .prose .callout strong {
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .prose a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--ink-30);
+    transition: background 0.15s, text-decoration-color 0.15s;
+  }
+  .prose a:hover {
+    background: var(--amber);
+    text-decoration-color: var(--ink);
+  }
+
+  /* ── Tension cards ── */
+  .tensions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 40px 0 64px;
+    max-width: 100%;
+  }
+  .tension-card {
+    background: var(--white);
+    border: var(--rule);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .tension-card h4 {
+    font-family: var(--serif);
+    font-size: 16px;
+    font-weight: 400;
+    margin-bottom: 10px;
+    color: var(--ink);
+  }
+  .tension-card p {
+    font-size: 13px !important;
+    line-height: 1.65 !important;
+    color: var(--ink-60) !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* ── Full-width principle sections ── */
+  .principles-section {
+    margin-top: 96px;
+  }
+  .principles-intro {
+    max-width: 680px;
+    margin: 0 auto 72px;
+  }
+
+  /* ── Principle card ── */
+  .principle {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 96px;
+    padding-bottom: 96px;
+    border-bottom: var(--rule);
+  }
+  .principle:last-of-type { border-bottom: none; }
+
+  /* sidebar is a passthrough so its children participate
+     in the principle's flex column and can be ordered. */
+  .principle-sidebar { display: contents; }
+
+  .principle-num {
+    order: 1;
+    font-family: var(--serif);
+    font-size: 80px;
+    line-height: 1;
+    color: var(--ink-10);
+    letter-spacing: -2px;
+    display: block;
+    margin-bottom: 12px;
+  }
+  .principle-label {
+    order: 2;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    margin-bottom: 10px;
+  }
+  .principle-title {
+    order: 3;
+    font-family: var(--serif);
+    font-size: clamp(28px, 3.5vw, 40px);
+    line-height: 1.15;
+    font-weight: 400;
+    margin-bottom: 48px;
+    color: var(--ink);
+  }
+  .principle-main {
+    order: 4;
+    min-width: 0;
+    margin-bottom: 56px;
+  }
+  .principle-desc {
+    order: 5;
+    max-width: 680px;
+    width: 100%;
+    margin: 0 auto 24px;
+    font-size: 18px;
+    line-height: 1.65;
+    color: var(--ink);
+    font-weight: 300;
+  }
+  .principle-prose {
+    order: 6;
+    max-width: 680px;
+    width: 100%;
+    margin: 0 auto;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--ink-80);
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .mockup-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-30);
+    margin-bottom: 12px;
+  }
+
+  /* ── Shared mockup chrome ── */
+  .chat-window {
+    background: var(--white);
+    border: var(--rule);
+    border-radius: 12px;
+    overflow: hidden;
+    font-family: var(--sans);
+  }
+  .chat-titlebar {
+    background: var(--ink-06);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: var(--rule);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .chat-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── Message bubbles ── */
+  .msg { display: flex; gap: 10px; align-items: flex-start; max-width: 100%; }
+  .msg.user { flex-direction: row-reverse; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 500; font-family: var(--mono);
+  }
+  .avatar-agent { background: var(--ink); color: var(--white); }
+  .avatar-user  { background: var(--ink-10); color: var(--ink-60); }
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    max-width: 480px;
+  }
+  .bubble-agent { background: var(--ink-06); color: var(--ink); border-bottom-left-radius: 4px; }
+  .bubble-user  { background: var(--ink); color: var(--white); border-bottom-right-radius: 4px; }
+
+  /* ── Intent confirm card (P1) ── */
+  .intent-card {
+    margin: 4px 0 4px 38px;
+    background: var(--amber);
+    border: 1.5px solid var(--ink);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+  }
+  .intent-card-text { color: var(--ink); line-height: 1.5; flex: 1; }
+  .intent-card-text strong { font-weight: 600; display: block; font-size: 11px; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); margin-bottom: 4px; }
+  .intent-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; margin-top: 2px; }
+  .btn { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; border: none; cursor: pointer; font-family: var(--sans); }
+  .btn-ghost { background: var(--white); border: 1px solid var(--ink); color: var(--ink); }
+  .btn-solid { background: var(--ink); color: var(--white); }
+  .btn-amber { background: var(--ink); color: var(--white); }
+
+  /* ── Error / recover card (P2) ── */
+  .error-card {
+    margin: 4px 0 4px 38px;
+    border: 1.5px solid var(--ink);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .error-header {
+    background: var(--ink);
+    color: var(--white);
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .error-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+  .error-icon.warn { background: var(--amber); color: var(--ink); }
+  .error-icon.stop { background: var(--red); color: var(--white); }
+  .error-title-text { font-weight: 500; color: var(--white); flex: 1; }
+  .error-body { padding: 14px 14px; background: var(--white); }
+  .error-why { color: var(--ink-80); margin-bottom: 14px; line-height: 1.6; }
+  .recover-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); margin-bottom: 8px; font-weight: 500; }
+  .recover-options { display: flex; flex-direction: column; gap: 6px; }
+  .recover-opt {
+    display: flex; align-items: center; gap: 12px; padding: 9px 12px;
+    border: 1px solid var(--ink-10); border-radius: 7px; cursor: pointer;
+    background: var(--white); transition: background 0.15s, border-color 0.15s;
+  }
+  .recover-opt:hover { background: var(--amber); border-color: var(--ink); }
+  .recover-opt-icon { width: 20px; height: 20px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--ink); }
+  .recover-opt-icon svg { width: 18px; height: 18px; display: block; }
+  .recover-opt-text { font-size: 13px; color: var(--ink); }
+
+  /* ── Uncertainty checkpoint (P3) ── */
+  .checkpoint-card {
+    margin: 4px 0 4px 38px;
+    border: 1.5px solid var(--blue);
+    border-radius: 10px;
+    background: var(--blue-light);
+    padding: 14px;
+    font-size: 13px;
+  }
+  .checkpoint-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .conf-meter { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .conf-label { font-family: var(--mono); font-size: 10px; color: var(--ink); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+  .conf-bar { flex: 1; height: 6px; background: rgba(0,0,0,0.12); border-radius: 3px; overflow: hidden; }
+  .conf-fill { height: 100%; border-radius: 3px; background: var(--blue); }
+  .conf-val { font-family: var(--mono); font-size: 11px; color: var(--ink); font-weight: 600; }
+  .checkpoint-text { color: var(--ink); line-height: 1.6; flex: 1; }
+  .checkpoint-actions { display: flex; gap: 8px; }
+  .btn-blue { background: var(--blue); color: var(--white); }
+  .btn-blue-ghost { background: var(--white); border: 1px solid var(--blue); color: var(--blue); }
+
+  /* ── Honest output (P4) ── */
+  .honest-block {
+    margin: 4px 0 4px 38px;
+    border: 1.5px solid var(--ink);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .honest-section { padding: 14px 16px; border-bottom: 1px solid var(--ink-10); line-height: 1.7; color: var(--ink); background: var(--white); }
+  .honest-section:last-child { border-bottom: none; }
+  .honest-section.low-conf { background: var(--amber-light); }
+  .honest-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 3px 10px; border-radius: 4px;
+    margin-bottom: 8px; font-weight: 600;
+    border: 1px solid var(--ink);
+  }
+  .badge-confident { background: var(--green); color: var(--ink); }
+  .badge-uncertain { background: var(--amber); color: var(--ink); }
+  .honest-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+  .dot-green { background: var(--ink); }
+  .dot-amber-col { background: var(--ink); }
+
+  /* ── Trust arc (P5) ── */
+  .trust-arc {
+    background: var(--white);
+    border: 1.5px solid var(--ink);
+    border-radius: 12px;
+    padding: 20px;
+    font-size: 13px;
+  }
+  .trust-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .trust-title { font-weight: 500; color: var(--ink); }
+  .trust-session { font-family: var(--mono); font-size: 10px; color: var(--ink-30); }
+  .trust-track-wrap { position: relative; margin-bottom: 24px; }
+  .trust-track {
+    height: 8px; border-radius: 4px;
+    background: linear-gradient(to right, #f0f0f0 0%, #c8f7d4 45%, var(--green) 100%);
+    position: relative;
+    border: 1px solid var(--ink);
+  }
+  .trust-thumb {
+    position: absolute; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--ink); border: 2px solid var(--ink);
+    top: 50%; transform: translate(-50%, -50%);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .trust-ticks { display: flex; justify-content: space-between; margin-top: 10px; }
+  .trust-tick { font-family: var(--mono); font-size: 10px; color: var(--ink-30); text-align: center; }
+  .trust-tick.active { color: var(--ink); font-weight: 500; }
+  .trust-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .trust-mode {
+    border: 1px solid var(--ink-10); border-radius: 8px; padding: 10px 12px;
+    background: var(--white);
+  }
+  .trust-mode.active { border: 1.5px solid var(--ink); background: var(--green); }
+  .trust-mode-name { font-weight: 500; font-size: 12px; color: var(--ink); margin-bottom: 4px; }
+  .trust-mode.active .trust-mode-name { color: var(--ink); }
+  .trust-mode-desc { font-size: 11px; color: var(--ink-60); line-height: 1.5; }
+  .trust-mode.active .trust-mode-desc { color: var(--ink); opacity: 1; }
+
+  /* ── Skill gradient (P6) ── */
+  .skill-card {
+    background: var(--white);
+    border: 1.5px solid var(--ink);
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .skill-tabs { display: flex; border-bottom: 1.5px solid var(--ink); }
+  .skill-tab {
+    padding: 10px 16px;
+    font-size: 12px; font-weight: 500; cursor: pointer; color: var(--ink-30);
+    border-right: 1px solid var(--ink-10);
+    font-family: var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .skill-tab.active { color: var(--ink); background: var(--amber); }
+  .skill-body { padding: 16px; }
+  .skill-simple { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+  .skill-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--ink); }
+  .skill-icon.warn { background: var(--amber); color: var(--ink); border: 1.5px solid var(--ink); }
+  .skill-icon svg { width: 20px; height: 20px; display: block; }
+  .skill-text { line-height: 1.6; color: var(--ink); }
+  .skill-expand {
+    border: 1px solid var(--ink); border-radius: 8px; overflow: hidden;
+  }
+  .skill-expand-header {
+    padding: 8px 12px; background: var(--ink); color: var(--white); display: flex;
+    align-items: center; justify-content: space-between; cursor: pointer;
+    font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .skill-expand-body {
+    padding: 10px 12px; font-family: var(--mono); font-size: 11px;
+    line-height: 1.8; color: var(--ink-80); background: var(--white);
+  }
+
+  /* ── Limit bar (P7) ── */
+  .limit-chrome {
+    background: var(--white);
+    border: 1.5px solid var(--ink);
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .limit-topbar {
+    padding: 10px 16px;
+    background: var(--amber);
+    border-bottom: 1.5px solid var(--ink);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .limit-bar-track {
+    flex: 1; height: 6px; border-radius: 3px;
+    background: rgba(0,0,0,0.2); overflow: hidden;
+  }
+  .limit-bar-fill {
+    height: 100%; border-radius: 3px;
+    background: var(--ink);
+  }
+  .limit-pct { font-family: var(--mono); font-size: 11px; color: var(--ink); font-weight: 600; }
+  .limit-tip { font-size: 12px; color: var(--ink); }
+  .limit-tip strong { font-weight: 600; }
+  .limit-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .limit-states { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+  .limit-state { border-radius: 8px; padding: 12px; border: 1.5px solid var(--ink); }
+  .limit-state.s-ok   { background: var(--green); }
+  .limit-state.s-warn { background: var(--amber); }
+  .limit-state.s-crit { background: var(--red); }
+  .limit-state-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; font-weight: 600; }
+  .s-ok   .limit-state-label { color: var(--ink); }
+  .s-warn .limit-state-label { color: var(--ink); }
+  .s-crit .limit-state-label { color: var(--white); }
+  .limit-state-pct { font-family: var(--mono); font-size: 20px; font-weight: 500; }
+  .s-ok   .limit-state-pct { color: var(--ink); }
+  .s-warn .limit-state-pct { color: var(--ink); }
+  .s-crit .limit-state-pct { color: var(--white); }
+  .limit-state-msg { font-size: 11px; line-height: 1.4; margin-top: 4px; }
+  .s-ok   .limit-state-msg { color: var(--ink); }
+  .s-warn .limit-state-msg { color: var(--ink); }
+  .s-crit .limit-state-msg { color: rgba(255,255,255,0.9); }
+
+  /* ── Acknowledge & act (P8) ── */
+  .pivot-toast {
+    margin: 0 0 4px 38px;
+    background: var(--ink);
+    color: var(--white);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px;
+  }
+  .pivot-arrow { font-size: 16px; opacity: 0.7; }
+  .pivot-text { flex: 1; }
+  .pivot-text em { font-style: normal; opacity: 0.6; }
+  .pivot-prev {
+    margin: 0 0 4px 38px;
+    background: var(--white);
+    border: 1px dashed var(--ink-30);
+    border-radius: 8px;
+    padding: 8px 14px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--ink-30);
+    text-decoration: line-through;
+    font-style: italic;
+  }
+  .pivot-tag { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink); background: var(--amber); border-radius: 4px; padding: 3px 8px; flex-shrink: 0; text-decoration: none; font-style: normal; font-weight: 600; }
+
+  /* ── Annotation band ── */
+  .annotation {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-left: 2px solid var(--ink);
+    background: var(--ink-06);
+    border-radius: 0 8px 8px 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--ink-80);
+  }
+  .annotation strong { font-weight: 500; color: var(--ink); font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 96px;
+    padding-top: 32px;
+    border-top: 2px solid var(--ink);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .footer-text { font-family: var(--mono); font-size: 11px; color: var(--ink-30); }
+
+  @media (max-width: 720px) {
+    body { padding: 32px 20px 80px; }
+    .principle-num { font-size: 56px; }
+    .principle-title { font-size: 28px; margin-bottom: 32px; }
+    .principle-main { margin-bottom: 40px; }
+    .trust-modes, .limit-states { grid-template-columns: 1fr; }
+    .skill-tabs { overflow-x: auto; }
+    .header { flex-direction: column; align-items: flex-start; }
+    .header-meta { text-align: left; }
+    .tensions-grid { grid-template-columns: 1fr; }
+    .prose { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div>
+    <p class="header-eyebrow">Field research · Design principles · Agent misbehavior</p>
+    <h1 class="header-title">When Agents<br><em>Misbehave</em></h1>
+    <p class="header-subtitle">Trust in agents is built in the moments they fail, not in the ones they succeed.</p>
+  </div>
+  <div class="header-meta">
+    Twelve practitioners<br>
+    Five failure types<br>
+    Eight principles<br>
+    Eight design patterns
+  </div>
+</header>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 1 — OPENING
+═══════════════════════════════════════════ -->
+<div class="prose">
+  <p>Most of the design effort today goes into the happy path: the well-prompted task, the accurate response, the smooth handoff between model and tool. Teams prototype the ideal interaction, test the intended flow, and refine the moment where everything goes right.</p>
+
+  <p>Everything past the happy path goes largely undesigned. It is a second priority when teams build agentic experiences.</p>
+
+  <p>What happens when an agent misreads your intent and executes confidently in the wrong direction? When it runs out of context mid-task and goes silent? When it hallucinates so fluently that a junior developer ships the result without noticing? These moments are where agent experiences live, and they remain largely undesigned.</p>
+
+  <p>To understand what good looks like in those moments, we spoke with twelve practitioners who build agentic systems for a living, or use them daily as part of their work — engineers, researchers, product managers, and designers. Between them they have shipped agents for supply chain decisioning, model customization, code generation, and enterprise data analysis. The findings here are not a survey. They are a field report.</p>
+
+  <p>In <a href="https://www.amazon.science/blog/designing-ai-agents-that-know-when-to-step-back">earlier work</a> we described coordination as the central design problem for agentic systems: the interplay between human involvement, AI salience, and what the agent is doing behind the scenes. Misbehavior is what happens when that coordination breaks down. The principles that follow are design responses to the specific ways it breaks.</p>
+
+  <hr class="section-rule">
+
+  <h2>A taxonomy of misbehavior</h2>
+
+  <p>Before getting to principles, it helps to name the categories. Across the conversations, five types of agent failure came up again and again. Each represents a different kind of breakdown in the contract between human and agent.</p>
+
+  <p class="taxonomy-item"><strong>Wrong intent</strong> is when the agent misreads what you wanted and executes in the wrong direction. Often there is no signal it is happening. The agent proceeds confidently. You only notice when it surfaces something that does not fit, or when you read the output carefully enough to catch the drift.</p>
+
+  <p class="taxonomy-item"><strong>Limited ability</strong> is when the agent reaches a ceiling it cannot cross: a context window running out, a tool it cannot access, a task genuinely outside its capability. The problem is not the ceiling. The problem is that the ceiling is usually invisible to the user until it has already been hit.</p>
+
+  <p class="taxonomy-item"><strong>Hallucination</strong> is the most notorious failure mode. The agent produces output that is plausible, confident and wrong. Unlike the others, this one does not announce itself. It requires the user to already know enough to catch it, which means users who do not have that knowledge are the most exposed.</p>
+
+  <p class="taxonomy-item"><strong>No answer</strong> is when the agent encounters a missing resource, a permissions wall, or a genuine absence of information and either goes silent or produces a response so generic it amounts to nothing. The failure is not the absence of an answer. It is the absence of a useful next step.</p>
+
+  <p class="taxonomy-item"><strong>Context disruption</strong> is what happens when a user changes direction mid-task: redirecting, interrupting, shifting scope. Agents handle this badly far more often than they handle it well. Most absorb the new input and continue, with no acknowledgement of what changed or what was left behind.</p>
+
+  <p>These five categories are not exhaustive. They cover the ground where trust is most commonly damaged, and where careful design can recover it.</p>
+
+  <hr class="section-rule">
+
+  <h2>How each failure actually plays out</h2>
+
+  <h3>On wrong intent: the cost of silent confidence</h3>
+
+  <p>Most agents give no signal when they have misunderstood. They proceed. The user only finds out by reading carefully, noticing the output has drifted, or getting to the end of a long execution and finding the result wrong.</p>
+
+  <p>One practitioner described a three-stage review process he had built for himself: he reads the chat interface as the agent writes, then checks the code, then reviews again when raising a change request. Three manual checkpoints to compensate for a design gap: no confirmation that the agent had understood the task before acting on it.</p>
+
+  <p>The fix participants wanted was simple and almost universally consistent: a brief, optional intent summary before execution begins. Not a confirmation dialog. Not a blocker. A short-form restatement that gives the user a chance to catch a misread before it cascades.</p>
+
+  <blockquote>Even if my prompt was four sentences long, it says: OK, I understand you want to replace your fireplace, here are the things I found. There is a confirmation, then an approach.</blockquote>
+
+  <p>The other insight here is about mode. Wrong-intent failures cluster in fast or agentic modes, where the agent is optimized for throughput rather than deliberation. Slower, spec-driven modes produce fewer misfires. The design implication: the faster the mode, the more important the intent check becomes.</p>
+
+  <h3>On limited ability: design the ceiling, not the floor</h3>
+
+  <p>Context windows run out. APIs hit rate limits. Tools fail silently. Access permissions block execution. These are not edge cases. They are regular events in any sustained agent workflow. Almost none of them are designed for.</p>
+
+  <p>The most striking contrast that emerged was between Claude CLI and Kiro (a coding agent many participants used at work). Claude CLI shows a running indicator of remaining context. You see when you are at 15%, plan your next prompt accordingly, ask for a summary before starting a new session. Kiro does not. It throttles silently, degrades performance without explanation and leaves users wondering whether it is broken or slow.</p>
+
+  <blockquote>When I work in Claude CLI I'm a very performant developer. In Kiro I constantly find myself hitting that limit without knowing, having to retrain it from scratch.</blockquote>
+
+  <p>This is a solvable problem. The pattern is well understood: surface approaching limits before they become crises. A progress indicator, a quiet warning, a gentle prompt. Any of these gives the user agency over what happens next. The current norm gives them nothing until it is too late.</p>
+
+  <p>When an agent cannot do something, participants consistently wanted two things in sequence: an honest explanation of what failed and why, followed immediately by a concrete recommendation for what to do instead. Error without direction is noise. Direction without explanation does not build understanding. Both together is a guided recovery.</p>
+
+  <h3>On hallucination: the expertise gap is a design problem</h3>
+
+  <p>Hallucination is widely discussed. What is less discussed is how differently people experience it depending on their level of domain expertise.</p>
+
+  <p>Senior engineers in the study spotted hallucinations quickly, often within seconds of reading output, because they already knew what correct output should look like. They would catch an agent writing mock data when real APIs existed, or implementing a frontend pattern that no experienced developer would use, because they had the reference model to compare against.</p>
+
+  <p>Junior developers often did not catch it. In several cases described, they approved and shipped agent-generated code that senior engineers later identified as structurally broken. The same agent, the same failure mode. Radically different outcomes depending on who was reviewing.</p>
+
+  <p>This is not a model problem. It is a design problem. Most agent interfaces treat hallucination as something to be explained in documentation rather than something to be surfaced in the product. Users are expected to bring their own skepticism. The users who most need protection are least equipped to provide it.</p>
+
+  <blockquote>If my junior engineer has a crazy idea, they'll come to me and say, 'I have this idea, is it worth pursuing before I spend time on it?' That's what I want from the agent.</blockquote>
+
+  <p>The deeper finding is worth sitting with: agents are currently trained such that saying "I don't know" is penalised equivalently to giving a wrong answer. This is why they guess, confidently, fluently, incorrectly, rather than admitting uncertainty. The design of the failure state is downstream of a training objective that treats honesty as a weakness. Surfacing uncertainty explicitly, marking low-confidence outputs visually and building in friction before high-stakes actions are all levers that matter.</p>
+
+  <h3>On no answer: silence is the worst response</h3>
+
+  <p>When an agent has no answer, no access, no data, no resource, no path forward, the worst thing it is able to do is nothing. An abrupt stop, a blank response, a generic error message that gives no guidance on what to try next. This was described as one of the most frustrating failure states across the board.</p>
+
+  <p>The pattern participants wanted was not complicated: acknowledge what failed, explain why if possible, offer a concrete alternative or next step. Even something like "I cannot find what you are looking for, but here are the things that do exist in this space" is dramatically better than silence. Proactive suggestion transforms a dead end into a redirect.</p>
+
+  <blockquote>I don't want the agent to stop. I want it to say: try again, or here's what you could do instead.</blockquote>
+
+  <p>The emotional register matters too. An agent that goes silent feels broken. One that acknowledges the gap and pivots feels like a collaborator.</p>
+
+  <h3>On context disruption: acknowledge the pivot, do not absorb it</h3>
+
+  <p>When users interrupt a running task, changing direction, adding context, redirecting, most agents absorb the new instruction and continue without acknowledging what changed. No confirmation of the new direction. No summary of what was in progress. No clean break.</p>
+
+  <p>The result is a kind of context soup: the agent is ostensibly following new instructions while still carrying the weight of the old ones. Participants described opening fresh conversation windows as a workaround, not because it was a good solution, but because it was the only way to ensure the old context was gone.</p>
+
+  <p>Two behaviors participants called out as especially problematic: the agent does not acknowledge that an interruption happened at all (silently incorporates it), and the agent over-apologises when corrected. Both erode trust, in different directions. The first suggests the agent is not tracking. The second is performative rather than functional.</p>
+
+  <p>What people want after an interruption: a brief, factual confirmation of the new direction and then movement. "Got it, switching to X" and then doing X. No drama, no excessive apology, no re-executing everything that already happened. Acknowledge and act.</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 2 — THREE TENSIONS
+═══════════════════════════════════════════ -->
+<div class="prose">
+  <hr class="section-rule">
+  <h2>Three tensions that cut across everything</h2>
+  <p>Before stating principles, it is worth naming the underlying tensions. These are the design problems the principles respond to.</p>
+</div>
+
+<div class="tensions-grid" style="max-width: 1100px; margin: 0 auto 64px;">
+  <div class="tension-card">
+    <h4>Transparency vs. speed</h4>
+    <p>Every participant wanted more visibility into what the agent was doing and why. Most of them also wanted things to be fast. These goals exist in real tension. The resolution is not to pick one. It is to let transparency be modulated by trust. Early in a working relationship, show more. As patterns stabilise and trust builds, abstract progressively.</p>
+  </div>
+  <div class="tension-card">
+    <h4>The expertise gradient</h4>
+    <p>The most important finding in the research may be the simplest: the same agent failure has completely different consequences depending on who is experiencing it. Senior engineers catch hallucinations and course-correct. Junior developers miss them and ship. Agents designed for expert users, with no guardrails, no uncertainty signalling, no scaffolding, are not complete products.</p>
+  </div>
+  <div class="tension-card">
+    <h4>Confidence vs. honesty</h4>
+    <p>There is a trained incentive in most current models to complete rather than to admit. To answer rather than to say "I don't know." This produces confident, fluent, wrong output. The design response is to create space for honesty. To make uncertainty visible, to reward "I'm not sure" over a hallucinated answer, to treat an agent that flags its own limitations as a feature.</p>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 3 — EIGHT PRINCIPLES WITH INLINE MOCKUPS
+═══════════════════════════════════════════ -->
+<div class="prose principles-intro">
+  <hr class="section-rule">
+  <h2>Eight principles for designing agent misbehavior</h2>
+  <p>These principles are grounded in what practitioners described wanting, not what they described getting. Each is paired with a design pattern that shows what the principle looks like in practice.</p>
+</div>
+
+
+<!-- P1 — CONFIRM BEFORE YOU COMMIT -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">01</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Confirm before you commit</h2>
+    <p class="principle-desc">Before acting, the agent briefly surfaces its understanding of intent, creating a lightweight coordination moment that keeps human involvement appropriately high at initiation, when misreads are most costly.</p>
+    <p class="principle-prose">Especially in fast or agentic modes, give the user a brief, optional restatement of how you have understood their intent before taking action. Not a dialog box. Not a blocker. A sentence. The user can override it. Most of the time they will not need to. The moments when they would have needed to are exactly the moments that currently cascade into long, frustrated recovery sessions.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — intent checkpoint</p>
+    <div class="chat-window">
+      <div class="chat-titlebar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      </div>
+      <div class="chat-body">
+        <div class="msg user">
+          <div class="avatar avatar-user">V</div>
+          <div class="bubble bubble-user">Analyze the Q3 sales data and summarize trends by region</div>
+        </div>
+        <div class="intent-card">
+          <div class="intent-card-text">
+            <strong>Before I proceed</strong>
+            I'll analyze the Q3 sales CSV, calculate regional totals and growth rates, and return a written summary with key trends. I won't modify any files.
+          </div>
+          <div class="intent-actions">
+            <button class="btn btn-ghost">Adjust</button>
+            <button class="btn btn-amber">Proceed</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> The card is shown for ~4 seconds then auto-proceeds. It is a checkpoint, not a gate. It anchors the coordination zone at initiation: human involvement is briefly high, then relaxes as the agent acts. The "Adjust" path opens an inline text field. Position: between the user message and the agent's first action step, not as a modal.
+    </div>
+  </div>
+</div>
+
+
+<!-- P2 — FAIL TRANSPARENTLY, RECOVER WITH DIRECTION -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">02</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Fail transparently, recover with direction</h2>
+    <p class="principle-desc">When AI activity hits a wall, the agent makes that visible rather than silent, and immediately offers a path forward. Transparency about what is happening behind the scenes is the minimum condition for maintaining trust.</p>
+    <p class="principle-prose">Every failure state should do two things: explain what happened and offer a concrete path forward. "I cannot access that resource" is not enough. "I cannot access that resource, here are the files I can see that might help" is designed. Raw error codes serve engineers debugging a system. They do not serve users trying to get something done. The tone should be matter-of-fact. The next step should be specific.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — structured error + recovery</p>
+    <div class="chat-window">
+      <div class="chat-titlebar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      </div>
+      <div class="chat-body">
+        <div class="msg user">
+          <div class="avatar avatar-user">V</div>
+          <div class="bubble bubble-user">Pull last month's model training metrics from the dashboard</div>
+        </div>
+        <div class="error-card">
+          <div class="error-header">
+            <div class="error-icon stop">✕</div>
+            <span class="error-title-text">Couldn't access the dashboard</span>
+          </div>
+          <div class="error-body">
+            <p class="error-why">Your session token for the metrics dashboard has expired. I can't retrieve live data without re-authentication.</p>
+            <p class="recover-label">What you can do</p>
+            <div class="recover-options">
+              <div class="recover-opt">
+                <span class="recover-opt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="3.5"/><path d="M10 13L20 3"/><path d="M16 5l3 3"/><path d="M13.5 7.5l2 2"/></svg></span>
+                <span class="recover-opt-text">Re-authenticate and retry automatically</span>
+              </div>
+              <div class="recover-opt">
+                <span class="recover-opt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg></span>
+                <span class="recover-opt-text">Use the exported CSV from last week's report instead</span>
+              </div>
+              <div class="recover-opt">
+                <span class="recover-opt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l5 5L9 20l-5 1 1-5L15 4z"/><path d="M13 6l5 5"/></svg></span>
+                <span class="recover-opt-text">Paste the metrics directly and I'll analyze them</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> The failure message is plain language, not an error code. The three recovery paths are ranked by least friction first. Each one re-establishes a coordination zone the user can enter. The agent does not apologise. Surfacing AI activity at the point of failure, not after, is what makes recovery feel designed rather than accidental.
+    </div>
+  </div>
+</div>
+
+
+<!-- P3 — SIGNAL UNCERTAINTY BEFORE THE RABBIT HOLE -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">03</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Signal uncertainty before the rabbit hole</h2>
+    <p class="principle-desc">When task complexity is high or user intent is ambiguous, the agent raises its own salience before going deep, pulling human involvement back up before it is too late to course-correct.</p>
+    <p class="principle-prose">When confidence is low, because the prompt is ambiguous, the domain is unfamiliar, the task is genuinely novel, say so before going deep, not after. The junior engineer analogy was cited repeatedly: a good junior flags uncertainty before spending two days on the wrong thing. The equivalent agent behavior is to surface low confidence early, invite clarification and only proceed into extended execution once there is reasonable alignment.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — pre-execution uncertainty checkpoint</p>
+    <div class="chat-window">
+      <div class="chat-titlebar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      </div>
+      <div class="chat-body">
+        <div class="msg user">
+          <div class="avatar avatar-user">V</div>
+          <div class="bubble bubble-user">Fix the latency issue in the model serving pipeline</div>
+        </div>
+        <div class="checkpoint-card">
+          <div class="checkpoint-top">
+            <div style="flex:1">
+              <div class="conf-meter">
+                <span class="conf-label">Confidence</span>
+                <div class="conf-bar"><div class="conf-fill" style="width:42%"></div></div>
+                <span class="conf-val">42%</span>
+              </div>
+              <p class="checkpoint-text" style="color: var(--ink);">I can see 3 possible causes for this latency issue, but I'm not confident which one applies to your setup without more context. If I guess wrong I could take this in the wrong direction for a while.</p>
+            </div>
+          </div>
+          <div class="conf-meter" style="margin-bottom:10px;">
+            <span class="conf-label" style="font-size:10px; color: var(--ink-60);">Before I dig in — which environment is affected?</span>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 10px;">
+            <button class="btn btn-blue-ghost">Production</button>
+            <button class="btn btn-blue-ghost">Staging</button>
+            <button class="btn btn-blue-ghost">Both</button>
+          </div>
+          <div class="checkpoint-actions">
+            <button class="btn btn-ghost" style="font-size:12px;">Skip — just try your best</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> The confidence meter is shown numerically and as a bar. Explicit, not decorative. This is responsive salience in action: the agent increases its own visibility when perceived risk is high, rather than waiting for the user to ask. The checkpoint is triggered only below a configurable threshold (e.g. &lt;60%). The "skip" escape hatch ensures it never becomes a blocker.
+    </div>
+  </div>
+</div>
+
+
+<!-- P4 — HONESTY OVER PERFORMANCE -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">04</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Honesty over performance</h2>
+    <p class="principle-desc">Because agentic AI is nondeterministic, confident-sounding output can still be wrong. Tiered output makes that legible. Users see not what the agent produced, but how much the agent knows.</p>
+    <p class="principle-prose">"I don't know" is better than a hallucinated answer. This requires a design stance, not a training fix, because the impulse to complete rather than to admit runs deep in how current models are shaped. Design that creates space for honesty includes: marking uncertain output visually, adding friction before high-stakes actions, giving users easy mechanisms to flag outputs that do not seem right. The agent that admits its limits is more trustworthy than the one that papers over them.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — tiered confidence output</p>
+    <div class="chat-window">
+      <div class="chat-titlebar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      </div>
+      <div class="chat-body">
+        <div class="msg user">
+          <div class="avatar avatar-user">V</div>
+          <div class="bubble bubble-user">What caused the spike in inference errors last Tuesday?</div>
+        </div>
+        <div class="honest-block">
+          <div class="honest-section">
+            <span class="honest-badge badge-confident"><div class="honest-dot dot-green"></div> Confirmed from logs</span>
+            <p>The error spike began at 14:32 UTC. It coincided with a deployment of model version 3.1.2 to the eu-west-1 cluster. Rollback was initiated at 15:08 UTC and errors dropped to baseline within 6 minutes.</p>
+          </div>
+          <div class="honest-section low-conf">
+            <span class="honest-badge badge-uncertain"><div class="honest-dot dot-amber-col"></div> Inferred — not confirmed</span>
+            <p>The most likely root cause is a memory allocation change in v3.1.2 that interacts poorly with the current GPU driver version on eu-west-1 instances. I don't have access to the deployment diff to verify this directly.</p>
+            <div style="margin-top:8px; display:flex; gap:8px;">
+              <button class="btn btn-ghost" style="font-size:11px; padding:4px 10px;">Show reasoning</button>
+              <button class="btn btn-ghost" style="font-size:11px; padding:4px 10px;">Flag as inaccurate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> Two tiers only: confirmed and inferred. The visual separation is color + badge, not a footnote asterisk. Nondeterministic systems require users to calibrate their own trust. This pattern makes that calibration possible. Users flag inaccurate sections inline, feeding back into the agent's context. Never three or more tiers. It becomes noise.
+    </div>
+  </div>
+</div>
+
+
+<!-- P5 — BUILD A TRUST ARC -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">05</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Build a salience arc, not a fixed mode</h2>
+    <p class="principle-desc">AI salience, how prominent and active the agent feels, should shift over time. High salience means the agent is visible, collaborative and explains itself. Low salience means it works quietly and autonomously. The right position changes as trust builds.</p>
+    <p class="principle-prose">Agents should not interact the same way on day one as they do on day thirty. Early interactions benefit from more explicit confirmation, slower pacing, more visible reasoning. As trust accumulates, as the user's mental model solidifies and the agent's understanding deepens, the interaction should progressively abstract. Show less, confirm less, move faster. Autonomy is earned, not assumed.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — responsive salience control</p>
+    <div class="trust-arc">
+      <div class="trust-header">
+        <span class="trust-title">Salience</span>
+        <span class="trust-session">Session 14 · 3 weeks active</span>
+      </div>
+      <div class="trust-track-wrap">
+        <div class="trust-track">
+          <div class="trust-thumb" style="left: 45%"></div>
+        </div>
+        <div class="trust-ticks" style="margin-top:10px;">
+          <span class="trust-tick">Low salience</span>
+          <span class="trust-tick active">↑ Now<br>Calibrated</span>
+          <span class="trust-tick">High salience</span>
+        </div>
+      </div>
+      <div class="trust-modes">
+        <div class="trust-mode">
+          <div class="trust-mode-name">Low salience</div>
+          <div class="trust-mode-desc">Done-for-me · agent acts autonomously, surfaces only blockers, summarizes after</div>
+        </div>
+        <div class="trust-mode active">
+          <div class="trust-mode-name">Calibrated</div>
+          <div class="trust-mode-desc">Done-with-me on complex steps · done-for-me on routine ones · adapts per task</div>
+        </div>
+        <div class="trust-mode">
+          <div class="trust-mode-name">High salience</div>
+          <div class="trust-mode-desc">Done-with-me · agent confirms intent, narrates reasoning, checks before acting</div>
+        </div>
+      </div>
+      <div style="margin-top:14px; padding-top:14px; border-top: var(--rule); font-size:12px; color: var(--ink-30); font-family: var(--mono);">
+        Salience shifts automatically based on task complexity, perceived risk &amp; user comfort · override manually at any time
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> Salience is driven by observable coordination signals: task complexity, perceived risk, correction frequency, not elapsed time. High salience increases human involvement and makes AI activity visible. Low salience steps back and lets the agent work. The current salience level is always shown so users are never surprised by how much the agent is doing on their behalf. Users override at any moment.
+    </div>
+  </div>
+</div>
+
+
+<!-- P6 — DESIGN FOR THE SKILL GRADIENT -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">06</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Design for the skill gradient</h2>
+    <p class="principle-desc">User comfort level and domain expertise are coordination signals. The same failure state should produce different salience and different amounts of AI activity depending on who is experiencing it.</p>
+    <p class="principle-prose">The users who most need protection from agent failures are the ones least equipped to protect themselves. This is not a reason to dumb down the experience. It is a reason to make error states, uncertainty signals and confirmation patterns adaptive. What a senior engineer needs at a moment of failure is different from what a first-year developer needs. The same failure state should not produce the same interface response for both.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — layered error disclosure</p>
+    <div class="skill-card">
+      <div class="skill-tabs">
+        <div class="skill-tab active">Simple</div>
+        <div class="skill-tab">Developer</div>
+        <div class="skill-tab" style="border-right:none;">Raw logs</div>
+      </div>
+      <div class="skill-body">
+        <div class="skill-simple">
+          <div class="skill-icon warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L1.5 21h21L12 3z"/><line x1="12" y1="10" x2="12" y2="15"/><circle cx="12" cy="18" r="0.9" fill="currentColor" stroke="none"/></svg></div>
+          <div class="skill-text">
+            <strong style="font-weight:500; display:block; margin-bottom:4px;">The training job couldn't start</strong>
+            The system doesn't have enough GPU capacity right now. This usually clears up within 30–60 minutes. You can wait and retry, or switch to a smaller instance type to start sooner.
+          </div>
+        </div>
+        <div class="skill-expand">
+          <div class="skill-expand-header">
+            <span>Technical details</span>
+            <span>▾</span>
+          </div>
+          <div class="skill-expand-body">
+            ResourceLimitExceeded: ml.p3.8xlarge capacity<br>
+            Region: us-east-1 · Requested: 4 instances<br>
+            Available: 0 · Queue position: 12<br>
+            Estimated wait: 45–90 min<br>
+            <br>
+            Alternative: ml.p3.2xlarge available (×8 now)<br>
+            Estimated training delta: +2.3h
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> Three tabs, not one. The "Simple" tab is what everyone sees by default, written for a user whose comfort level with the domain is low. "Developer" shows structured technical data for users who want more AI activity visible. "Raw logs" for engineers who need full transparency. The default tab is set per user role, not locked globally. This is coordination calibrated to who is in the loop.
+    </div>
+  </div>
+</div>
+
+
+<!-- P7 — ANNOUNCE LIMITS BEFORE THEY BITE -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">07</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Announce limits before they bite</h2>
+    <p class="principle-desc">Coordination curves have valleys: stretches where the agent operates independently and human involvement drops. When those valleys approach a hard limit, salience should rise enough to let the user plan their next move.</p>
+    <p class="principle-prose">Context windows, rate limits, tool access, knowledge cutoffs: these are features, not secrets. A well-designed agent surfaces approaching limits in time for users to do something about them. The pattern from Claude CLI, showing remaining context percentage as you work, was cited as one of the most useful behaviors any agent had produced. It changes the user's behavior in the moment. That is what good signalling does.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — progressive limit indicator</p>
+    <div class="limit-chrome">
+      <div class="limit-topbar">
+        <span class="limit-tip"><strong>18% context remaining</strong> — consider summarizing before starting a new task</span>
+        <div class="limit-bar-track">
+          <div class="limit-bar-fill" style="width: 18%"></div>
+        </div>
+        <span class="limit-pct">18%</span>
+      </div>
+      <div class="limit-body">
+        <div class="msg">
+          <div class="avatar avatar-agent">A</div>
+          <div class="bubble bubble-agent">Here's the refactored authentication module. I've separated the OAuth flow from the session management and added proper error boundaries throughout…</div>
+        </div>
+        <div class="limit-states">
+          <div class="limit-state s-ok">
+            <div class="limit-state-label">Comfortable</div>
+            <div class="limit-state-pct">80–100%</div>
+            <div class="limit-state-msg">No indicator shown</div>
+          </div>
+          <div class="limit-state s-warn">
+            <div class="limit-state-label">Approaching</div>
+            <div class="limit-state-pct">15–79%</div>
+            <div class="limit-state-msg">Bar appears, no action needed yet</div>
+          </div>
+          <div class="limit-state s-crit">
+            <div class="limit-state-label">Critical</div>
+            <div class="limit-state-pct">&lt;15%</div>
+            <div class="limit-state-msg">Prompt to summarize &amp; continue</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> The bar only appears when the limit is worth being aware of (&lt;80%). At comfortable capacity there is no visual noise: salience stays low. As the limit approaches, salience rises enough to prompt action. The color transitions warm as limits close in, amber not red, because this is a coordination signal, not an alarm. The message is always actionable: not "low context" but "consider summarizing before your next task."
+    </div>
+  </div>
+</div>
+
+
+<!-- P8 — ACKNOWLEDGE AND ACT -->
+<div class="principle">
+  <div class="principle-sidebar">
+    <span class="principle-num">08</span>
+    <p class="principle-label">Principle</p>
+    <h2 class="principle-title">Acknowledge and act, don't apologise</h2>
+    <p class="principle-desc">Context disruption is a coordination event. The agent should handle the handoff cleanly: marking what was in progress, confirming the new direction and restoring momentum, without treating it as an emotional moment.</p>
+    <p class="principle-prose">When corrected or interrupted, an agent should acknowledge the new direction and move on. Not apologise three times, not re-explain everything it had been doing, not perform contrition. "Got it, adjusting to X" and then adjusting to X. Over-apologising was described as actively frustrating. It adds latency without adding value and makes the agent feel fragile rather than capable. The goal after an interruption is momentum, not emotional management.</p>
+  </div>
+  <div class="principle-main">
+    <p class="mockup-label">Pattern — clean pivot acknowledgement</p>
+    <div class="chat-window">
+      <div class="chat-titlebar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      </div>
+      <div class="chat-body">
+        <div class="msg">
+          <div class="avatar avatar-agent">A</div>
+          <div class="bubble bubble-agent">I'm refactoring the authentication module — renaming the token handlers and restructuring the session middleware…</div>
+        </div>
+        <div class="msg user">
+          <div class="avatar avatar-user">V</div>
+          <div class="bubble bubble-user">Stop — actually I need to fix the login bug first before we refactor anything</div>
+        </div>
+        <div class="pivot-prev">
+          <span class="pivot-tag">Paused</span>
+          Auth module refactor — 30% complete
+        </div>
+        <div class="pivot-toast">
+          <span class="pivot-arrow">↩</span>
+          <span class="pivot-text">Switching to login bug. <em>Refactor paused and saved — you can resume it later.</em></span>
+        </div>
+        <div class="msg">
+          <div class="avatar avatar-agent">A</div>
+          <div class="bubble bubble-agent">OK — what's the login bug? Can you describe what's failing, or point me to the relevant file?</div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Design note</strong> Three elements, in sequence: (1) the paused task is shown struck-through and labelled "Paused," the coordination curve dips but the thread is preserved; (2) a single dark toast acknowledges the pivot and confirms continuity; (3) the agent immediately moves human involvement back up by asking for what it needs. No apology. No recap. A good handoff looks like this: acknowledge, confirm, proceed.
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     CLOSING
+═══════════════════════════════════════════ -->
+<div class="prose">
+  <hr class="section-rule">
+  <h2>What designing for misbehavior means</h2>
+
+  <p>Designing for misbehavior is not the same as designing for failure. It is designing for trust.</p>
+
+  <p>An agent that handles errors gracefully, signals uncertainty honestly, confirms before it acts and pivots cleanly when redirected is not a lesser agent than one that always succeeds. It is a more trustworthy one. Trust does not come from never failing. It comes from how failure is handled.</p>
+
+  <p>The happy path is not where users form their lasting impressions of an agent. The moment where something goes wrong, and the agent either handles it well or does not, is where character is revealed. Right now, almost no one is designing that moment.</p>
+
+  <p>They should be.</p>
+
+  <p style="font-size: 14px; color: var(--ink-60); font-style: italic; margin-top: 48px;">This piece draws on research conducted across twelve practitioners building and using agentic AI systems in enterprise contexts. Participants spanned engineering, product, design and research roles.</p>
+</div>
+
+
+<!-- ── Footer ── -->
+<footer class="footer">
+  <p class="footer-text">When Agents Misbehave · Design Principles · 2025</p>
+  <p class="footer-text">5 failure types · 8 principles · 8 patterns · grounded in field research</p>
+</footer>
+
+
+<!-- ── Password Gate ── -->
+<div id="password-gate">
+  <div class="gate-box">
+    <p class="gate-label">When Agents<br><em>Misbehave</em></p>
+    <p class="gate-sub">Design principles · Access required</p>
+    <input type="password" id="gate-input" placeholder="Enter password" autofocus />
+    <p class="gate-error" id="gate-error">Incorrect password</p>
+    <button onclick="checkPassword()">Enter</button>
+  </div>
+</div>
+
+<script>
+  document.body.classList.add('locked');
+  const HASH = '87c6d469eac26c879033137518ddcc29be8ab7cd7d2c2d490a1df033';
+  async function sha224(str) {
+    const enc = new TextEncoder().encode(str);
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,56);
+  }
+  async function checkPassword() {
+    const val = document.getElementById('gate-input').value;
+    const hash = await sha224(val);
+    if (hash === HASH) {
+      document.getElementById('password-gate').remove();
+      document.body.classList.remove('locked');
+      sessionStorage.setItem('agent_blog_auth','1');
+    } else {
+      const err = document.getElementById('gate-error');
+      err.style.display = 'block';
+      document.getElementById('gate-input').value = '';
+      document.getElementById('gate-input').focus();
+    }
+  }
+  document.getElementById('gate-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkPassword();
+  });
+  if (sessionStorage.getItem('agent_blog_auth') === '1') {
+    document.getElementById('password-gate').remove();
+    document.body.classList.remove('locked');
+  }
+</script>
+
+</body>
+</html>
